@@ -270,7 +270,7 @@ def train_sentence_dbow(model, word_vocabs, doctag_indexes, alpha, work=None,
                         word_vectors=None, word_locks=None, doctag_vectors=None, doctag_locks=None):
     cdef int hs = model.hs
     cdef int negative = model.negative
-    cdef int _train_words = train_words
+    cdef REAL_t _train_words = train_words
     cdef int _learn_words = learn_words
     cdef int _learn_hidden = learn_hidden
     cdef int _learn_doctags = learn_doctags
@@ -350,10 +350,15 @@ def train_sentence_dbow(model, word_vocabs, doctag_indexes, alpha, work=None,
             else:
                 codelens[i] = 1
             result += 1
-    if _train_words:
+    if _train_words > 0:
         # single randint() call avoids a big thread-synchronization slowdown
         for i, item in enumerate(np.random.randint(0, window, sentence_len)):
             reduced_windows[i] = item
+        if _train_words < 1.0:
+            # downsample words during sg
+            for i, item in enumerate(np.random.random(sentence_len)):
+                if item > _train_words:
+                    reduced_windows[i] = window  # skip ### TODO: change sense of reduced_window for clarity?
     for i in range(doctag_len):
         _doctag_indexes[i] = doctag_indexes[i]
         result += 1
@@ -363,7 +368,7 @@ def train_sentence_dbow(model, word_vocabs, doctag_indexes, alpha, work=None,
         for i in range(sentence_len):
             if codelens[i] == 0:
                 continue
-            if _train_words:  # simultaneous skip-gram wordvec-training
+            if (_train_words > 0) and reduced_windows[i] < window:  # simultaneous skip-gram wordvec-training
                 j = i - window + reduced_windows[i]
                 if j < 0:
                     j = 0

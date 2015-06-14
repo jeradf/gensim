@@ -616,6 +616,8 @@ class Doc2Vec(Word2Vec):
             segments.append('dbow')  # PV-DBOW (skip-gram-style)
             if self.dbow_words:
                 segments.append('w')  # also training words
+                if self.dbow_words < 1.0:
+                    segments.append('%.3f' % self.dbow_words)  # sg sampling
         else:
             segments.append('dm')  # PV-DM...
             if self.dm_concat:
@@ -636,7 +638,7 @@ class Doc2Vec(Word2Vec):
         if self.min_count > 1:
             segments.append('mc%d' % self.min_count)
         if self.sample > 0:
-            segments.append('s%d' % self.sample)
+            segments.append('s%E' % self.sample)
         if self.workers > 1:
             segments.append('t%d' % self.workers)
         return ''.join(segments)
