@@ -63,7 +63,7 @@ except:
     FAST_VERSION = -1
 
     def train_document_dbow(model, word_vocabs, doctag_indexes, alpha, work=None,
-                            train_words=False, learn_doctags=True, learn_words=True, learn_hidden=True,
+                            train_words=1.0, learn_doctags=True, learn_words=True, learn_hidden=True,
                             word_vectors=None, word_locks=None, doctag_vectors=None, doctag_locks=None):
         """
         Update distributed bag of words model ("PV-DBOW") by training on a single document.
@@ -92,6 +92,7 @@ except:
             doctag_locks = model.docvecs.doctag_syn0_lockf
 
         if train_words and learn_words:
+            # TODO adapt for fractional train_words
             train_sentence_sg(model, word_vocabs, alpha, work)  # TODO: adapt for word_vectors/word_locks
         for doctag_index in doctag_indexes:
             for word in word_vocabs:
@@ -458,7 +459,7 @@ class Doc2Vec(Word2Vec):
     """Class for training, using and evaluating neural networks described in http://arxiv.org/pdf/1405.4053v2.pdf"""
     def __init__(self, documents=None, size=300, alpha=0.025, window=8, min_count=5,
                  sample=0, seed=1, workers=1, min_alpha=0.0001, dm=1, hs=1, negative=0,
-                 dbow_words=0, dm_mean=0, dm_concat=0, dm_tag_count=1,
+                 dbow_words=0.0, dm_mean=0, dm_concat=0, dm_tag_count=1,
                  docvecs=None, docvecs_mapfile=None, comment=None, **kwargs):
         """
         Initialize the model from an iterable of `documents`. Each document is a
@@ -633,8 +634,11 @@ class Doc2Vec(Word2Vec):
         if self.comment:
             segments.append('"%s"' % self.comment)
         if self.sg:
-            if self.dbow_words:
-                segments.append('dbow+w')  # also training words
+            if self.dbow_words:  # also training words
+                if self.dbow_words < 1.0:
+                    segments.append('dbow+w%.3f' % self.dbow_words)  # downsampling
+                else:
+                    segments.append('dbow+w')
             else:
                 segments.append('dbow')  # PV-DBOW (skip-gram-style)
 
